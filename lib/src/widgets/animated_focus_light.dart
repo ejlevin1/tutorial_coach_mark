@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:tutorial_coach_mark/src/clipper/circle_clipper.dart';
 import 'package:tutorial_coach_mark/src/clipper/rect_clipper.dart';
+import 'package:tutorial_coach_mark/src/controller/tutorial_coach_mark_controller.dart';
 import 'package:tutorial_coach_mark/src/paint/light_paint.dart';
 import 'package:tutorial_coach_mark/src/paint/light_paint_rect.dart';
 import 'package:tutorial_coach_mark/src/target/target_focus.dart';
@@ -11,7 +12,7 @@ import 'package:tutorial_coach_mark/src/target/target_position.dart';
 import 'package:tutorial_coach_mark/src/util.dart';
 
 class AnimatedFocusLight extends StatefulWidget {
-  final List<TargetFocus> targets;
+  final TutorialCoachMarkController controller;
   final Function(TargetFocus)? focus;
   final FutureOr Function(TargetFocus)? clickTarget;
   final FutureOr Function(TargetFocus, TapDownDetails)?
@@ -29,10 +30,11 @@ class AnimatedFocusLight extends StatefulWidget {
   final bool pulseEnable;
   final bool rootOverlay;
   final ImageFilter? imageFilter;
+  final FutureOr Function(TargetFocus target)? preFindTarget;
 
   const AnimatedFocusLight({
     Key? key,
-    required this.targets,
+    required this.controller,
     this.focus,
     this.finish,
     this.removeFocus,
@@ -49,8 +51,8 @@ class AnimatedFocusLight extends StatefulWidget {
     this.imageFilter,
     this.pulseEnable = true,
     this.rootOverlay = false,
-  })  : assert(targets.length > 0),
-        super(key: key);
+    this.preFindTarget,
+  }) : super(key: key);
 
   @override
   // ignore: no_logic_in_create_state
@@ -63,31 +65,42 @@ abstract class AnimatedFocusLightState extends State<AnimatedFocusLight>
     with TickerProviderStateMixin {
   final borderRadiusDefault = 10.0;
   final defaultFocusAnimationDuration = const Duration(milliseconds: 600);
-  late AnimationController _controller;
+
   late CurvedAnimation _curvedAnimation;
 
-  late TargetFocus _targetFocus;
+  late TargetFocus? _targetFocus;
   Offset _positioned = const Offset(0.0, 0.0);
   TargetPosition? _targetPosition;
 
   double _sizeCircle = 100;
-  int _currentFocus = 0;
   double _progressAnimated = 0;
   bool _goNext = true;
+
+  void onControllerUpdated() {
+    if (_targetFocus != widget.controller.currentTarget) {
+      setState(() {
+        _targetFocus = widget.controller.currentTarget;
+      });
+
+      if (_targetFocus == null || !widget.controller.isRunning) {
+        widget.finish?.call();
+      } else {
+        _runFocus();
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _targetFocus = widget.targets[_currentFocus];
-    _controller = AnimationController(
-      vsync: this,
-      duration: _targetFocus.focusAnimationDuration ??
-          widget.focusAnimationDuration ??
-          defaultFocusAnimationDuration,
-    )..addStatusListener(_listener);
+
+    widget.controller.addListener(onControllerUpdated);
+    widget.controller.animation?.addStatusListener(_listener);
+
+    _targetFocus = widget.controller.currentTarget;
 
     _curvedAnimation = CurvedAnimation(
-      parent: _controller,
+      parent: widget.controller.animation!,
       curve: Curves.ease,
     );
 
@@ -96,38 +109,42 @@ abstract class AnimatedFocusLightState extends State<AnimatedFocusLight>
 
   @override
   void dispose() {
-    _controller.dispose();
+    widget.controller.removeListener(onControllerUpdated);
+    widget.controller.animation?.removeStatusListener(_listener);
     super.dispose();
   }
-
-  void next() => _tapHandler();
-
-  void previous() => _tapHandler(goNext: false);
 
   Future _tapHandler({
     bool goNext = true,
     bool targetTap = false,
     bool overlayTap = false,
   }) async {
-    if (targetTap) {
-      await widget.clickTarget?.call(_targetFocus);
-    }
-    if (overlayTap) {
-      await widget.clickOverlay?.call(_targetFocus);
+    if (_targetFocus != null) {
+      if (targetTap) {
+        await widget.clickTarget?.call(_targetFocus!);
+      }
+      if (overlayTap) {
+        await widget.clickOverlay?.call(_targetFocus!);
+      }
     }
   }
 
   Future _tapHandlerForPosition(TapDownDetails tapDetails) async {
-    await widget.clickTargetWithTapPosition?.call(_targetFocus, tapDetails);
+    if (_targetFocus != null) {
+      await widget.clickTargetWithTapPosition?.call(_targetFocus!, tapDetails);
+    }
   }
 
-  void _runFocus() {
-    if (_currentFocus < 0) return;
-    _targetFocus = widget.targets[_currentFocus];
+  void _runFocus() async {
+    if (widget.controller.currentTarget == null) return;
+    _targetFocus = widget.controller.currentTarget!;
 
-    _controller.duration = _targetFocus.focusAnimationDuration ??
-        widget.focusAnimationDuration ??
-        defaultFocusAnimationDuration;
+    try {
+      await widget.preFindTarget?.call(widget.controller.currentTarget!);
+    } catch (e, s) {
+      debugPrint(e.toString());
+      debugPrintStack(stackTrace: s);
+    }
 
     TargetPosition? targetPosition;
     try {
@@ -140,8 +157,12 @@ abstract class AnimatedFocusLightState extends State<AnimatedFocusLight>
       debugPrintStack(stackTrace: s);
     }
 
+    // debugPrint(
+    //     'targetPosition identity=${widget.controller.currentTarget!.identify} size=${targetPosition?.size}, offset=${targetPosition?.offset}');
     if (targetPosition == null) {
-      _finish();
+      // debugPrint(
+      //     'Auto-progressing to next step. ${widget.controller.currentTarget!.identify} target not found.');
+      widget.controller.next();
       return;
     }
 
@@ -159,50 +180,19 @@ abstract class AnimatedFocusLightState extends State<AnimatedFocusLight>
         _sizeCircle = targetPosition.size.width * 0.6 + _getPaddingFocus();
       }
     });
-
-    _controller.duration = _targetFocus.unFocusAnimationDuration ??
-        widget.unFocusAnimationDuration ??
-        _targetFocus.focusAnimationDuration ??
-        widget.focusAnimationDuration ??
-        defaultFocusAnimationDuration;
-    _controller.forward();
-  }
-
-  void _nextFocus() {
-    if (_currentFocus >= widget.targets.length - 1) {
-      _finish();
-      return;
-    }
-    _currentFocus++;
-
-    _runFocus();
-  }
-
-  void _previousFocus() {
-    if (_currentFocus <= 0) {
-      _finish();
-      return;
-    }
-    _currentFocus--;
-    _runFocus();
-  }
-
-  void _finish() {
-    safeSetState(() => _currentFocus = 0);
-    widget.finish!();
   }
 
   void _listener(AnimationStatus status);
 
-  CustomPainter _getPainter(TargetFocus target) {
-    if (target.shape == ShapeLightFocus.RRect) {
+  CustomPainter _getPainter(TargetFocus? target) {
+    if (target?.shape == ShapeLightFocus.RRect) {
       return LightPaintRect(
-        colorShadow: target.color ?? widget.colorShadow,
+        colorShadow: target?.color ?? widget.colorShadow,
         progress: _progressAnimated,
         offset: _getPaddingFocus(),
         target: _targetPosition ?? TargetPosition(Size.zero, Offset.zero),
-        radius: target.radius ?? 0,
-        borderSide: target.borderSide,
+        radius: target?.radius ?? 0,
+        borderSide: target?.borderSide,
         opacityShadow: widget.opacityShadow,
       );
     } else {
@@ -210,21 +200,21 @@ abstract class AnimatedFocusLightState extends State<AnimatedFocusLight>
         _progressAnimated,
         _positioned,
         _sizeCircle,
-        colorShadow: target.color ?? widget.colorShadow,
-        borderSide: target.borderSide,
+        colorShadow: target?.color ?? widget.colorShadow,
+        borderSide: target?.borderSide,
         opacityShadow: widget.opacityShadow,
       );
     }
   }
 
   double _getPaddingFocus() {
-    return _targetFocus.paddingFocus ?? (widget.paddingFocus);
+    return _targetFocus?.paddingFocus ?? (widget.paddingFocus);
   }
 
   BorderRadius _betBorderRadiusTarget() {
-    double radius = _targetFocus.shape == ShapeLightFocus.Circle
+    double radius = _targetFocus?.shape == ShapeLightFocus.Circle
         ? _targetPosition?.size.width ?? borderRadiusDefault
-        : _targetFocus.radius ?? borderRadiusDefault;
+        : _targetFocus?.radius ?? borderRadiusDefault;
     return BorderRadius.circular(radius);
   }
 }
@@ -244,12 +234,16 @@ class AnimatedStaticFocusLightState extends AnimatedFocusLightState {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.controller.animation == null) {
+      return const SizedBox.shrink();
+    }
+
     return InkWell(
-      onTap: _targetFocus.enableOverlayTab
+      onTap: _targetFocus?.enableOverlayTab ?? false
           ? () => _tapHandler(overlayTap: true)
           : null,
       child: AnimatedBuilder(
-        animation: _controller,
+        animation: widget.controller.animation!,
         builder: (_, child) {
           _progressAnimated = _curvedAnimation.value;
           return Stack(
@@ -267,7 +261,7 @@ class AnimatedStaticFocusLightState extends AnimatedFocusLightState {
                 child: InkWell(
                   borderRadius: _betBorderRadiusTarget(),
                   onTapDown: _tapHandlerForPosition,
-                  onTap: _targetFocus.enableTargetTab
+                  onTap: _targetFocus?.enableTargetTab ?? false
                       ? () => _tapHandler(targetTap: true)
 
                       /// Essential for collecting [TapDownDetails]. Do not make [null]
@@ -298,19 +292,18 @@ class AnimatedStaticFocusLightState extends AnimatedFocusLightState {
       overlayTap: overlayTap,
     );
     safeSetState(() => _goNext = goNext);
-    _controller.reverse();
   }
 
   @override
   void _listener(AnimationStatus status) {
-    if (status == AnimationStatus.completed) {
-      widget.focus?.call(_targetFocus);
+    if (status == AnimationStatus.completed && _targetFocus != null) {
+      widget.focus?.call(_targetFocus!);
     }
     if (status == AnimationStatus.dismissed) {
       if (_goNext) {
-        _nextFocus();
+        // widget.controller.next();
       } else {
-        _previousFocus();
+        // widget.controller.previous();
       }
     }
 
@@ -346,7 +339,7 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
     );
 
     _tweenPulse = _createTweenAnimation(
-      _targetFocus.pulseVariation ??
+      _targetFocus?.pulseVariation ??
           widget.pulseVariation ??
           defaultPulseVariation,
     );
@@ -356,20 +349,27 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.controller.animation == null) {
+      return const SizedBox.shrink();
+    }
+
     return InkWell(
-      onTap: _targetFocus.enableOverlayTab
+      onTap: _targetFocus?.enableOverlayTab ?? false
           ? () => _tapHandler(overlayTap: true)
           : null,
       child: AnimatedBuilder(
-        animation: _controller,
+        animation: widget.controller.animation!,
         builder: (_, child) {
           _progressAnimated = _curvedAnimation.value;
+          // print(
+          //     'controller.value=${widget.controller.animation!.value}, curvedAnimation.value=${_curvedAnimation.value}, left=$left, top=$top');
           return AnimatedBuilder(
             animation: _controllerPulse,
             builder: (_, child) {
               if (_finishFocus) {
                 _progressAnimated = _tweenPulse.value;
               }
+              // print('animationBuilder val=${_tweenPulse.value}');
               return Stack(
                 children: <Widget>[
                   _getLightPaint(_targetFocus),
@@ -378,7 +378,7 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
                     top: top,
                     child: InkWell(
                       borderRadius: _betBorderRadiusTarget(),
-                      onTap: _targetFocus.enableTargetTab
+                      onTap: _targetFocus?.enableTargetTab ?? false
                           ? () => _tapHandler(targetTap: true)
 
                           /// Essential for collecting [TapDownDetails]. Do not make [null]
@@ -403,7 +403,7 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
   @override
   void _runFocus() {
     _tweenPulse = _createTweenAnimation(
-      _targetFocus.pulseVariation ??
+      _targetFocus?.pulseVariation ??
           widget.pulseVariation ??
           defaultPulseVariation,
     );
@@ -440,10 +440,10 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
 
   @override
   void _listener(AnimationStatus status) {
-    if (status == AnimationStatus.completed) {
+    if (status == AnimationStatus.completed && _targetFocus != null) {
       safeSetState(() => _finishFocus = true);
 
-      widget.focus?.call(_targetFocus);
+      widget.focus?.call(_targetFocus!);
 
       _controllerPulse.forward();
     }
@@ -452,11 +452,6 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
         _finishFocus = false;
         _initReverse = false;
       });
-      if (_goNext) {
-        _nextFocus();
-      } else {
-        _previousFocus();
-      }
     }
 
     if (status == AnimationStatus.reverse) {
@@ -472,7 +467,11 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
     if (status == AnimationStatus.dismissed) {
       if (_initReverse) {
         safeSetState(() => _finishFocus = false);
-        _controller.reverse();
+        if (_goNext) {
+          widget.controller.next();
+        } else {
+          widget.controller.previous();
+        }
       } else if (_finishFocus) {
         _controllerPulse.forward();
       }
@@ -485,10 +484,10 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
     );
   }
 
-  Widget _getLightPaint(TargetFocus targetFocus) {
+  Widget _getLightPaint(TargetFocus? targetFocus) {
     if (widget.imageFilter != null) {
       return ClipPath(
-        clipper: _getClipper(targetFocus.shape),
+        clipper: _getClipper(targetFocus?.shape),
         child: BackdropFilter(
           filter: widget.imageFilter!,
           child: _getSizedPainter(targetFocus),
@@ -499,7 +498,7 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
     }
   }
 
-  SizedBox _getSizedPainter(TargetFocus targetFocus) {
+  SizedBox _getSizedPainter(TargetFocus? targetFocus) {
     return SizedBox(
       width: double.maxFinite,
       height: double.maxFinite,
@@ -515,14 +514,14 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
             progress: _progressAnimated,
             offset: _getPaddingFocus(),
             target: _targetPosition ?? TargetPosition(Size.zero, Offset.zero),
-            radius: _targetFocus.radius ?? 0,
-            borderSide: _targetFocus.borderSide,
+            radius: _targetFocus?.radius ?? 0,
+            borderSide: _targetFocus?.borderSide,
           )
         : CircleClipper(
             _progressAnimated,
             _positioned,
             _sizeCircle,
-            _targetFocus.borderSide,
+            _targetFocus?.borderSide,
           );
   }
 }

@@ -30,7 +30,7 @@ class MyHomePage extends StatefulWidget {
   MyHomePageState createState() => MyHomePageState();
 }
 
-class MyHomePageState extends State<MyHomePage> {
+class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   late TutorialCoachMark tutorialCoachMark;
 
   GlobalKey keyButton = GlobalKey();
@@ -227,7 +227,8 @@ class MyHomePageState extends State<MyHomePage> {
 
   void createTutorial() {
     tutorialCoachMark = TutorialCoachMark(
-      targets: _createTargets(),
+      controller: DefaultTutorialCoachMarkController(
+          targets: _createTargets(), vsync: this),
       colorShadow: Colors.red,
       textSkip: "SKIP",
       paddingFocus: 10,

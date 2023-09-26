@@ -4,17 +4,19 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:tutorial_coach_mark/src/target/target_focus.dart';
-import 'package:tutorial_coach_mark/src/util.dart';
 import 'package:tutorial_coach_mark/src/widgets/tutorial_coach_mark_widget.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
+export 'package:tutorial_coach_mark/src/controller/tutorial_coach_mark_controller.dart';
+export 'package:tutorial_coach_mark/src/controller/tutorial_coach_mark_controller_utils.dart';
 export 'package:tutorial_coach_mark/src/target/target_content.dart';
+export 'package:tutorial_coach_mark/src/target/target_extensions.dart';
 export 'package:tutorial_coach_mark/src/target/target_focus.dart';
 export 'package:tutorial_coach_mark/src/target/target_position.dart';
 export 'package:tutorial_coach_mark/src/util.dart';
 
 class TutorialCoachMark {
-  final List<TargetFocus> targets;
+  final TutorialCoachMarkController controller;
   final FutureOr<void> Function(TargetFocus)? onClickTarget;
   final FutureOr<void> Function(TargetFocus, TapDownDetails)?
       onClickTargetWithTapPosition;
@@ -28,7 +30,7 @@ class TutorialCoachMark {
   final bool hideSkip;
   final Color colorShadow;
   final double opacityShadow;
-  final GlobalKey<TutorialCoachMarkWidgetState> _widgetKey = GlobalKey();
+  static final GlobalKey<TutorialCoachMarkWidgetState> _widgetKey = GlobalKey();
   final Duration focusAnimationDuration;
   final Duration unFocusAnimationDuration;
   final Duration pulseAnimationDuration;
@@ -36,11 +38,12 @@ class TutorialCoachMark {
   final Widget? skipWidget;
   final bool showSkipInLastTarget;
   final ImageFilter? imageFilter;
+  final FutureOr Function(TargetFocus target)? preFindTarget;
 
   OverlayEntry? _overlayEntry;
 
   TutorialCoachMark({
-    required this.targets,
+    required this.controller,
     this.colorShadow = Colors.black,
     this.onClickTarget,
     this.onClickTargetWithTapPosition,
@@ -60,6 +63,7 @@ class TutorialCoachMark {
     this.skipWidget,
     this.showSkipInLastTarget = true,
     this.imageFilter,
+    this.preFindTarget,
   }) : assert(opacityShadow >= 0 && opacityShadow <= 1);
 
   OverlayEntry _buildOverlay({bool rootOverlay = false}) {
@@ -67,12 +71,12 @@ class TutorialCoachMark {
       builder: (context) {
         return TutorialCoachMarkWidget(
           key: _widgetKey,
-          targets: targets,
+          controller: controller,
           clickTarget: onClickTarget,
           onClickTargetWithTapPosition: onClickTargetWithTapPosition,
           clickOverlay: onClickOverlay,
           paddingFocus: paddingFocus,
-          onClickSkip: skip,
+          onClickSkip: onSkip,
           alignSkip: alignSkip,
           skipWidget: skipWidget,
           textSkip: textSkip,
@@ -84,10 +88,11 @@ class TutorialCoachMark {
           unFocusAnimationDuration: unFocusAnimationDuration,
           pulseAnimationDuration: pulseAnimationDuration,
           pulseEnable: pulseEnable,
-          finish: finish,
+          finish: onFinish,
           rootOverlay: rootOverlay,
           showSkipInLastTarget: showSkipInLastTarget,
           imageFilter: imageFilter,
+          preFindTarget: preFindTarget,
         );
       },
     );
@@ -96,9 +101,12 @@ class TutorialCoachMark {
   void show({required BuildContext context, bool rootOverlay = false}) {
     OverlayState? overlay = Overlay.of(context, rootOverlay: rootOverlay);
     overlay.let((it) {
+      controller.start();
       showWithOverlayState(overlay: it, rootOverlay: rootOverlay);
     });
   }
+
+  static bool get isOverlayShowing => _widgetKey.currentContext != null;
 
   // `navigatorKey` needs to be the one that you passed to MaterialApp.navigatorKey
   void showWithNavigatorStateKey({
@@ -130,21 +138,15 @@ class TutorialCoachMark {
     }
   }
 
-  void finish() {
-    onFinish?.call();
-    _removeOverlay();
-  }
-
-  void skip() {
-    onSkip?.call();
+  void close() {
     _removeOverlay();
   }
 
   bool get isShowing => _overlayEntry != null;
 
-  void next() => _widgetKey.currentState?.next();
+  void next() => controller.next();
 
-  void previous() => _widgetKey.currentState?.previous();
+  void previous() => controller.previous();
 
   void _removeOverlay() {
     _overlayEntry?.remove();

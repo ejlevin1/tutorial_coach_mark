@@ -6,11 +6,13 @@ import 'package:tutorial_coach_mark/src/target/target_position.dart';
 enum ShapeLightFocus { Circle, RRect }
 
 TargetPosition? getTargetCurrent(
-  TargetFocus target, {
+  TargetFocus? target, {
   bool rootOverlay = false,
 }) {
-  if (target.keyTarget != null) {
-    var key = target.keyTarget!;
+  if (target?.keyTarget != null) {
+    var key = target!.keyTarget!;
+
+    if (key.currentContext == null) return null;
 
     try {
       final RenderBox renderBoxRed =
@@ -42,14 +44,8 @@ TargetPosition? getTargetCurrent(
       throw NotFoundTargetException();
     }
   } else {
-    return target.targetPosition;
+    return target?.targetPosition;
   }
-}
-
-abstract class TutorialCoachMarkController {
-  void next();
-  void previous();
-  void skip();
 }
 
 extension StateExt on State {
