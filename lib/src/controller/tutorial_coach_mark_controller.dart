@@ -72,11 +72,8 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     if (targets.isEmpty) {
       throw Exception("Can't start tutorial without any targets added");
     }
-    print("starting");
-
     _index = -1;
     await _move(true);
-    print("current index $_index");
     if (isRunning) {
       _eventsController?.add(TutorialCoachMarkEvent(
           eventType: TutorialCoachMarkEventType.starting));
@@ -88,8 +85,8 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     bool preSuccessful = false;
     TargetFocus? newTarget;
 
-    while (!preSuccessful && getOffsetTarget(index + offset) != null) {
-      newTarget = getOffsetTarget(index + offset);
+    while (!preSuccessful && getOffsetTarget(offset) != null) {
+      newTarget = getOffsetTarget(offset);
       preSuccessful = await _callPreActionTargetSafely(newTarget);
       if (!preSuccessful) {
         if (newTarget != null) {
@@ -171,7 +168,6 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     return _eventsController!.stream;
   }
 
-  @override
   TargetFocus? getOffsetTarget(int offset) {
     var newIndex = index + offset;
     if (newIndex >= 0 && _targets.length > newIndex) {
@@ -251,12 +247,17 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   Future _callPostActionTargetSafely(TargetFocus? target) async {
     if (target != null && target is PostActionTarget) {
       var pat = (target as PostActionTarget);
+      _eventsController?.add(TutorialCoachTargetBeforePreEvent(target: target));
       if (pat.post != null) {
         try {
           await pat.post!();
+          _eventsController
+              ?.add(TutorialCoachTargetAfterPreEvent(target: target));
         } catch (e, s) {
           debugPrint(e.toString());
           debugPrintStack(stackTrace: s);
+          _eventsController?.add(TutorialCoachTargetAfterPostFailedEvent(
+              target: target, message: e.toString()));
         }
       }
     }
@@ -266,11 +267,17 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     if (target != null && target is PreActionTarget) {
       var pat = (target as PreActionTarget);
       if (pat.pre != null) {
+        _eventsController
+            ?.add(TutorialCoachTargetBeforePreEvent(target: target));
         try {
           await pat.pre!();
+          _eventsController
+              ?.add(TutorialCoachTargetAfterPreEvent(target: target));
         } catch (e, s) {
           debugPrint(e.toString());
           debugPrintStack(stackTrace: s);
+          _eventsController?.add(TutorialCoachTargetAfterPreFailedEvent(
+              target: target, message: e.toString()));
           return false;
         }
       }

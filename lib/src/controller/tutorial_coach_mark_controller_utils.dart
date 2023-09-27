@@ -17,13 +17,89 @@ enum TutorialCoachMarkEventType {
   canceling,
   finished,
   targetShowing,
-  targetFailed
+  targetFailed,
+  controllerEvent
 }
 
 class TutorialCoachMarkEvent {
   TutorialCoachMarkEvent({required this.eventType});
 
   TutorialCoachMarkEventType eventType;
+}
+
+abstract class TutorialCoachTargetBaseControllerEvent
+    extends TutorialCoachMarkEvent {
+  TutorialCoachTargetBaseControllerEvent({
+    required this.target,
+  }) : super(
+          eventType: TutorialCoachMarkEventType.controllerEvent,
+        );
+
+  final TargetFocus target;
+}
+
+abstract class TutorialCoachTargetBaseControllerEventWithMessage
+    extends TutorialCoachTargetBaseControllerEvent {
+  TutorialCoachTargetBaseControllerEventWithMessage({
+    required TargetFocus target,
+    required this.message,
+  }) : super(
+          target: target,
+        );
+
+  final String message;
+}
+
+class TutorialCoachTargetBeforePreEvent
+    extends TutorialCoachTargetBaseControllerEvent {
+  TutorialCoachTargetBeforePreEvent({
+    required TargetFocus target,
+  }) : super(
+          target: target,
+        );
+
+  @override
+  String toString() => 'Before Pre() event for ${target.identify}';
+}
+
+class TutorialCoachTargetAfterPreEvent
+    extends TutorialCoachTargetBaseControllerEvent {
+  TutorialCoachTargetAfterPreEvent({
+    required TargetFocus target,
+  }) : super(
+          target: target,
+        );
+
+  @override
+  String toString() => 'After Pre() event for ${target.identify}';
+}
+
+class TutorialCoachTargetAfterPreFailedEvent
+    extends TutorialCoachTargetBaseControllerEventWithMessage {
+  TutorialCoachTargetAfterPreFailedEvent({
+    required TargetFocus target,
+    required String message,
+  }) : super(
+          target: target,
+          message: message,
+        );
+
+  @override
+  String toString() => 'Pre() event failed for ${target.identify}: $message';
+}
+
+class TutorialCoachTargetAfterPostFailedEvent
+    extends TutorialCoachTargetBaseControllerEventWithMessage {
+  TutorialCoachTargetAfterPostFailedEvent({
+    required TargetFocus target,
+    required String message,
+  }) : super(
+          target: target,
+          message: message,
+        );
+
+  @override
+  String toString() => 'Post() event failed for ${target.identify}: $message';
 }
 
 class TutorialCoachTargetShowingEvent extends TutorialCoachMarkEvent {
