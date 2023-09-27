@@ -101,7 +101,6 @@ class TutorialCoachMark {
   void show({required BuildContext context, bool rootOverlay = false}) {
     OverlayState? overlay = Overlay.of(context, rootOverlay: rootOverlay);
     overlay.let((it) {
-      controller.start();
       showWithOverlayState(overlay: it, rootOverlay: rootOverlay);
     });
   }

@@ -14,10 +14,10 @@ class TutorialCoachMarkControllerException implements Exception {
 
 enum TutorialCoachMarkEventType {
   starting,
-  running,
-  skipped,
+  canceling,
   finished,
-  targetShowing
+  targetShowing,
+  targetFailed
 }
 
 class TutorialCoachMarkEvent {
@@ -31,6 +31,16 @@ class TutorialCoachTargetShowingEvent extends TutorialCoachMarkEvent {
     required this.target,
   }) : super(
           eventType: TutorialCoachMarkEventType.targetShowing,
+        );
+
+  final TargetFocus target;
+}
+
+class TutorialCoachTargetFailedEvent extends TutorialCoachMarkEvent {
+  TutorialCoachTargetFailedEvent({
+    required this.target,
+  }) : super(
+          eventType: TutorialCoachMarkEventType.targetFailed,
         );
 
   final TargetFocus target;

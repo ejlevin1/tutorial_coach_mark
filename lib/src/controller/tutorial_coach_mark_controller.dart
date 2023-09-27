@@ -20,16 +20,12 @@ abstract class TutorialCoachMarkController extends Listenable {
 
   Stream<TutorialCoachMarkEvent> get events;
 
+  Future start();
   Future next();
   Future previous();
-  Future skip();
-
-  Future start();
   Future pause();
   Future resume();
-
-  TargetFocus? getPrevTarget();
-  TargetFocus? getNextTarget();
+  Future cancel();
 }
 
 class DefaultTutorialCoachMarkController extends ChangeNotifier
@@ -76,32 +72,47 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     if (targets.isEmpty) {
       throw Exception("Can't start tutorial without any targets added");
     }
+    print("starting");
 
+    _index = -1;
+    await _move(true);
+    print("current index $_index");
     if (isRunning) {
-      _animateHideTarget();
-    } else {
       _eventsController?.add(TutorialCoachMarkEvent(
           eventType: TutorialCoachMarkEventType.starting));
     }
-
-    _index = 0;
-    await _callPreActionTargetSafely(currentTarget);
-    notifyListeners();
-    await _animateShowTarget();
   }
 
-  @override
-  Future next() async {
+  Future<int> _getAllowedOffsetIndex(bool forward) async {
+    int offset = (forward ? 1 : -1);
+    bool preSuccessful = false;
+    TargetFocus? newTarget;
+
+    while (!preSuccessful && getOffsetTarget(index + offset) != null) {
+      newTarget = getOffsetTarget(index + offset);
+      preSuccessful = await _callPreActionTargetSafely(newTarget);
+      if (!preSuccessful) {
+        if (newTarget != null) {
+          _eventsController
+              ?.add(TutorialCoachTargetFailedEvent(target: newTarget));
+        }
+        offset += (forward ? 1 : -1);
+      }
+    }
+
+    return offset;
+  }
+
+  Future _move(bool forward) async {
     if (isPaused) return;
 
     await _animateHideTarget();
     await _callPostActionTargetSafely(currentTarget);
 
-    var newTarget = getNextTarget();
-    await _callPreActionTargetSafely(newTarget);
-
+    var offset = await _getAllowedOffsetIndex(forward);
+    TargetFocus? newTarget = getOffsetTarget(offset);
     if (newTarget != null) {
-      _index++;
+      _index += offset;
     } else {
       _index = -1;
     }
@@ -117,30 +128,10 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   @override
-  Future previous() async {
-    if (isPaused) return;
+  Future next() => _move(true);
 
-    await _animateHideTarget();
-    await _callPostActionTargetSafely(currentTarget);
-
-    var newTarget = getPrevTarget();
-    await _callPreActionTargetSafely(newTarget);
-
-    if (newTarget != null) {
-      _index--;
-    } else {
-      _index = -1;
-    }
-
-    notifyListeners();
-
-    if (newTarget == null) {
-      _eventsController?.add(TutorialCoachMarkEvent(
-          eventType: TutorialCoachMarkEventType.finished));
-    }
-
-    await _animateShowTarget();
-  }
+  @override
+  Future previous() => _move(false);
 
   _fireTargetShowing(TargetFocus? target) {
     if (target == null) return;
@@ -149,13 +140,11 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   @override
-  Future skip() async {
-    if (currentTarget is PostActionTarget) {
-      (currentTarget as PostActionTarget).post?.call();
-    }
+  Future cancel() async {
+    _callPostActionTargetSafely(currentTarget);
 
-    _eventsController?.add(
-        TutorialCoachMarkEvent(eventType: TutorialCoachMarkEventType.skipped));
+    _eventsController?.add(TutorialCoachMarkEvent(
+        eventType: TutorialCoachMarkEventType.canceling));
 
     _index = -1;
     notifyListeners();
@@ -183,17 +172,10 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   @override
-  TargetFocus? getNextTarget() {
-    if (index >= 0 && _targets.length > (index + 1)) {
-      return _targets[index + 1];
-    }
-    return null;
-  }
-
-  @override
-  TargetFocus? getPrevTarget() {
-    if (index > 0) {
-      return _targets[index - 1];
+  TargetFocus? getOffsetTarget(int offset) {
+    var newIndex = index + offset;
+    if (newIndex >= 0 && _targets.length > newIndex) {
+      return _targets[newIndex];
     }
     return null;
   }
@@ -205,13 +187,13 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   @override
-  bool get hasNext => getNextTarget() != null;
+  bool get hasNext => getOffsetTarget(1) != null;
 
   @override
-  bool get hasPrevious => getPrevTarget() != null;
+  bool get hasPrevious => getOffsetTarget(-1) != null;
 
   @override
-  bool get isRunning => index != -1;
+  bool get isRunning => currentTarget != null;
 
   @override
   void addTargets(Iterable<TargetFocus> targets) {
@@ -280,7 +262,7 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     }
   }
 
-  Future _callPreActionTargetSafely(TargetFocus? target) async {
+  Future<bool> _callPreActionTargetSafely(TargetFocus? target) async {
     if (target != null && target is PreActionTarget) {
       var pat = (target as PreActionTarget);
       if (pat.pre != null) {
@@ -289,9 +271,12 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
         } catch (e, s) {
           debugPrint(e.toString());
           debugPrintStack(stackTrace: s);
+          return false;
         }
       }
     }
+
+    return true;
   }
 
   @override

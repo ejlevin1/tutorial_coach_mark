@@ -260,7 +260,7 @@ class TutorialCoachMarkWidgetState extends State<TutorialCoachMarkWidget> {
           opacity: showContent ? 1 : 0,
           duration: const Duration(milliseconds: 300),
           child: InkWell(
-            onTap: () => controller.skip(),
+            onTap: () => controller.cancel(),
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: IgnorePointer(
