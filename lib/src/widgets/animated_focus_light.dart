@@ -298,16 +298,7 @@ class AnimatedStaticFocusLightState extends AnimatedFocusLightState {
   void _listener(AnimationStatus status) {
     if (status == AnimationStatus.completed && _targetFocus != null) {
       widget.focus?.call(_targetFocus!);
-    }
-    if (status == AnimationStatus.dismissed) {
-      if (_goNext) {
-        // widget.controller.next();
-      } else {
-        // widget.controller.previous();
-      }
-    }
-
-    if (status == AnimationStatus.reverse) {
+    } else if (status == AnimationStatus.reverse) {
       widget.removeFocus!();
     }
   }

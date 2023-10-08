@@ -40,6 +40,7 @@ class TutorialCoachMark {
   final ImageFilter? imageFilter;
   final FutureOr Function(TargetFocus target)? preFindTarget;
 
+  bool disposing = false;
   OverlayEntry? _overlayEntry;
 
   TutorialCoachMark({
@@ -131,21 +132,18 @@ class TutorialCoachMark {
     OverlayState overlay, {
     bool rootOverlay = false,
   }) {
-    if (_overlayEntry == null) {
+    if (!disposing && _overlayEntry == null) {
       _overlayEntry = _buildOverlay(rootOverlay: rootOverlay);
       overlay.insert(_overlayEntry!);
     }
   }
 
-  void close() {
+  void dispose() {
+    disposing = true;
     _removeOverlay();
   }
 
   bool get isShowing => _overlayEntry != null;
-
-  void next() => controller.next();
-
-  void previous() => controller.previous();
 
   void _removeOverlay() {
     _overlayEntry?.remove();

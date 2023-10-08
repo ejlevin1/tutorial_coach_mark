@@ -180,7 +180,8 @@ class TutorialCoachMarkWidgetState extends State<TutorialCoachMarkWidget> {
     double? right;
 
     children = controller.currentTarget!.contents!.map<Widget>((i) {
-      switch (i.align) {
+      final align = i.calculateAlignment(context, target!);
+      switch (align) {
         case ContentAlign.bottom:
           {
             weight = MediaQuery.of(context).size.width;
@@ -202,14 +203,14 @@ class TutorialCoachMarkWidgetState extends State<TutorialCoachMarkWidget> {
           {
             weight = positioned.dx - haloWidth;
             left = 0;
-            top = positioned.dy - target!.size.height / 2 - haloHeight;
+            top = positioned.dy - target.size.height / 2 - haloHeight;
             bottom = null;
           }
           break;
         case ContentAlign.right:
           {
             left = positioned.dx + haloWidth;
-            top = positioned.dy - target!.size.height / 2 - haloHeight;
+            top = positioned.dy - target.size.height / 2 - haloHeight;
             bottom = null;
             weight = MediaQuery.of(context).size.width - left!;
           }

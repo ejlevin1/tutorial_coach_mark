@@ -506,7 +506,7 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
             children: <Widget>[
               InkWell(
                 onTap: () {
-                  tutorialCoachMark.previous();
+                  tutorialCoachMark.controller.previous();
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(10.0),

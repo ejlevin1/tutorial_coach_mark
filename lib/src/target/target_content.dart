@@ -33,13 +33,30 @@ class TargetContent {
     this.child,
     this.customPosition,
     this.builder,
-  }) : assert(!(align == ContentAlign.custom && customPosition == null));
+    ContentAlign Function(BuildContext context, TargetPosition targetPosition)?
+        calculateAlignment,
+  })  : assert(!(align == ContentAlign.custom && customPosition == null)),
+        _calcAlignment = calculateAlignment ?? createDefaultAlignmentFn(align);
+
+  static ContentAlign Function(
+          BuildContext context, TargetPosition targetPosition)
+      createDefaultAlignmentFn(ContentAlign align) {
+    return (BuildContext context, TargetPosition targetPosition) {
+      return align;
+    };
+  }
 
   final ContentAlign align;
   final EdgeInsets padding;
   final CustomTargetContentPosition? customPosition;
   final Widget? child;
   final TargetContentBuilder? builder;
+  final ContentAlign Function(
+      BuildContext context, TargetPosition targetPosition) _calcAlignment;
+
+  ContentAlign calculateAlignment(
+          BuildContext context, TargetPosition targetPosition) =>
+      _calcAlignment(context, targetPosition);
 
   @override
   String toString() {
