@@ -109,12 +109,13 @@ abstract class AnimatedFocusLightState extends State<AnimatedFocusLight>
 
   @override
   void dispose() {
+    _curvedAnimation.dispose();
     widget.controller.removeListener(onControllerUpdated);
     widget.controller.animation?.removeStatusListener(_listener);
     super.dispose();
   }
 
-  Future _tapHandler({
+  Future<void> _tapHandler({
     bool goNext = true,
     bool targetTap = false,
     bool overlayTap = false,
@@ -129,7 +130,7 @@ abstract class AnimatedFocusLightState extends State<AnimatedFocusLight>
     }
   }
 
-  Future _tapHandlerForPosition(TapDownDetails tapDetails) async {
+  Future<void> _tapHandlerForPosition(TapDownDetails tapDetails) async {
     if (_targetFocus != null) {
       await widget.clickTargetWithTapPosition?.call(_targetFocus!, tapDetails);
     }
@@ -281,7 +282,7 @@ class AnimatedStaticFocusLightState extends AnimatedFocusLightState {
   }
 
   @override
-  Future _tapHandler({
+  Future<void> _tapHandler({
     bool goNext = true,
     bool targetTap = false,
     bool overlayTap = false,

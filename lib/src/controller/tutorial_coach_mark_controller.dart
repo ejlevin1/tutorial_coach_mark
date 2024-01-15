@@ -20,12 +20,14 @@ abstract class TutorialCoachMarkController extends Listenable {
 
   Stream<TutorialCoachMarkEvent> get events;
 
-  Future start();
-  Future next();
-  Future previous();
-  Future pause();
-  Future resume();
-  Future cancel();
+  Future<void> start();
+  Future<void> next();
+  Future<void> previous();
+  Future<void> pause();
+  Future<void> resume();
+  Future<void> cancel();
+
+  void dispose();
 }
 
 class DefaultTutorialCoachMarkController extends ChangeNotifier
@@ -56,6 +58,8 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   AnimationController? _animationController;
   StreamController<TutorialCoachMarkEvent>? _eventsController;
 
+  bool get isDisposed => _eventsController == null;
+
   int get index => _index;
   int _index;
 
@@ -68,7 +72,7 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   @override
-  Future start() async {
+  Future<void> start() async {
     if (targets.isEmpty) {
       throw Exception("Can't start tutorial without any targets added");
     }
@@ -81,6 +85,11 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   Future<int> _getAllowedOffsetIndex(bool forward) async {
+    if (isDisposed) {
+      debugPrintStack(
+          label: 'Called _getAllowedOffsetIndex() when controller is disposed');
+    }
+
     int offset = (forward ? 1 : -1);
     bool preSuccessful = false;
     TargetFocus? newTarget;
@@ -100,7 +109,9 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     return offset;
   }
 
-  Future _move(bool forward) async {
+  Future<void> _move(bool forward) async {
+    _ensureNotDisposed('move targets');
+
     if (isPaused) return;
 
     await _animateHideTarget();
@@ -125,10 +136,10 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   @override
-  Future next() => _move(true);
+  Future<void> next() => _move(true);
 
   @override
-  Future previous() => _move(false);
+  Future<void> previous() => _move(false);
 
   _fireTargetShowing(TargetFocus? target) {
     if (target == null) return;
@@ -137,7 +148,7 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   @override
-  Future cancel() async {
+  Future<void> cancel() async {
     _callPostActionTargetSafely(currentTarget);
 
     _eventsController?.add(TutorialCoachMarkEvent(
@@ -150,21 +161,25 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   @override
-  Future pause() async {
+  Future<void> pause() async {
     _paused = true;
   }
 
   @override
-  Future resume() async {
+  Future<void> resume() async {
     _paused = false;
+  }
+
+  void _ensureNotDisposed(String method) {
+    if (_eventsController == null) {
+      throw TutorialCoachMarkControllerException(
+          "Cannot $method on a disposed controller");
+    }
   }
 
   @override
   Stream<TutorialCoachMarkEvent> get events {
-    if (_eventsController == null) {
-      throw TutorialCoachMarkControllerException(
-          "Cannot listen to events on a disposed controller");
-    }
+    _ensureNotDisposed('get event stream');
     return _eventsController!.stream;
   }
 
@@ -193,6 +208,8 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
 
   @override
   void addTargets(Iterable<TargetFocus> targets) {
+    _ensureNotDisposed('add targets');
+
     for (var target in targets) {
       if (_targets.where((t) => t.identify == target.identify).isEmpty) {
         _targets.add(target);
@@ -217,6 +234,8 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
 
   @override
   void setTargets(Iterable<TargetFocus> targets) {
+    _ensureNotDisposed('set targets');
+
     if (isRunning) {
       throw TutorialCoachMarkControllerException(
           "Cant replace targets when tutorial is running");
@@ -226,8 +245,8 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     _targets.addAll(targets);
   }
 
-  Future _animateShowTarget() async {
-    if (currentTarget != null && _animationController != null) {
+  Future<void> _animateShowTarget() async {
+    if (currentTarget != null && _animationController != null && !isDisposed) {
       _animationController!.duration =
           currentTarget?.unFocusAnimationDuration ??
               // widget.unFocusAnimationDuration ??
@@ -240,11 +259,15 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     }
   }
 
-  Future _animateHideTarget() async {
+  Future<void> _animateHideTarget() async {
+    if (isDisposed) return;
+
     await _animationController?.reverse();
   }
 
-  Future _callPostActionTargetSafely(TargetFocus? target) async {
+  Future<void> _callPostActionTargetSafely(TargetFocus? target) async {
+    if (isDisposed) return;
+
     if (target != null && target is PostActionTarget) {
       var pat = (target as PostActionTarget);
       _eventsController?.add(TutorialCoachTargetBeforePreEvent(target: target));
@@ -264,6 +287,14 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
   }
 
   Future<bool> _callPreActionTargetSafely(TargetFocus? target) async {
+    if (isDisposed) {
+      debugPrintStack(
+          label:
+              'Called _callPreActionTargetSafely() when controller is disposed');
+    }
+
+    if (isDisposed) return false;
+
     if (target != null && target is PreActionTarget) {
       var pat = (target as PreActionTarget);
       if (pat.pre != null) {

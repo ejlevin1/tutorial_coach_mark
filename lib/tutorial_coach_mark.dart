@@ -38,7 +38,7 @@ class TutorialCoachMark {
   final Widget? skipWidget;
   final bool showSkipInLastTarget;
   final ImageFilter? imageFilter;
-  final FutureOr Function(TargetFocus target)? preFindTarget;
+  final FutureOr<void> Function(TargetFocus target)? preFindTarget;
 
   bool disposing = false;
   OverlayEntry? _overlayEntry;
