@@ -139,10 +139,8 @@ class TutorialCoachMarkWidgetState extends State<TutorialCoachMarkWidget> {
 
     TargetPosition? target;
     try {
-      target = getTargetCurrent(
-        controller.currentTarget!,
-        rootOverlay: widget.rootOverlay,
-      );
+      target = controller.currentTarget
+          ?.findPosition(rootOverlay: widget.rootOverlay);
     } on NotFoundTargetException catch (e, s) {
       debugPrint(e.toString());
       debugPrintStack(stackTrace: s);

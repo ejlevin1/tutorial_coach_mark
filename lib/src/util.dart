@@ -1,52 +1,7 @@
 import 'package:flutter/widgets.dart';
-import 'package:tutorial_coach_mark/src/target/target_focus.dart';
-import 'package:tutorial_coach_mark/src/target/target_position.dart';
 
 // ignore: constant_identifier_names
 enum ShapeLightFocus { Circle, RRect }
-
-TargetPosition? getTargetCurrent(
-  TargetFocus? target, {
-  bool rootOverlay = false,
-}) {
-  if (target?.keyTarget != null) {
-    var key = target!.keyTarget!;
-
-    if (key.currentContext == null) return null;
-
-    try {
-      final RenderBox renderBoxRed =
-          key.currentContext!.findRenderObject() as RenderBox;
-      final size = renderBoxRed.size;
-
-      BuildContext? context;
-      if (rootOverlay) {
-        context = key.currentContext!
-            .findRootAncestorStateOfType<OverlayState>()
-            ?.context;
-      } else {
-        context = key.currentContext!
-            .findAncestorStateOfType<NavigatorState>()
-            ?.context;
-      }
-      Offset offset;
-      if (context != null) {
-        offset = renderBoxRed.localToGlobal(
-          Offset.zero,
-          ancestor: context.findRenderObject(),
-        );
-      } else {
-        offset = renderBoxRed.localToGlobal(Offset.zero);
-      }
-
-      return TargetPosition(size, offset);
-    } catch (e) {
-      throw NotFoundTargetException();
-    }
-  } else {
-    return target?.targetPosition;
-  }
-}
 
 extension StateExt on State {
   void safeSetState(VoidCallback call) {

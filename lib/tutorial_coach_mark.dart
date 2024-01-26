@@ -9,10 +9,12 @@ import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 export 'package:tutorial_coach_mark/src/controller/tutorial_coach_mark_controller.dart';
 export 'package:tutorial_coach_mark/src/controller/tutorial_coach_mark_controller_utils.dart';
+export 'package:tutorial_coach_mark/src/extensions/build_context_extensions.dart';
 export 'package:tutorial_coach_mark/src/target/target_content.dart';
 export 'package:tutorial_coach_mark/src/target/target_extensions.dart';
 export 'package:tutorial_coach_mark/src/target/target_focus.dart';
 export 'package:tutorial_coach_mark/src/target/target_position.dart';
+export 'package:tutorial_coach_mark/src/target/target_resolvers.dart';
 export 'package:tutorial_coach_mark/src/util.dart';
 
 class TutorialCoachMark {
@@ -38,7 +40,6 @@ class TutorialCoachMark {
   final Widget? skipWidget;
   final bool showSkipInLastTarget;
   final ImageFilter? imageFilter;
-  final FutureOr<void> Function(TargetFocus target)? preFindTarget;
 
   bool disposing = false;
   OverlayEntry? _overlayEntry;
@@ -64,7 +65,6 @@ class TutorialCoachMark {
     this.skipWidget,
     this.showSkipInLastTarget = true,
     this.imageFilter,
-    this.preFindTarget,
   }) : assert(opacityShadow >= 0 && opacityShadow <= 1);
 
   OverlayEntry _buildOverlay({bool rootOverlay = false}) {
@@ -93,7 +93,6 @@ class TutorialCoachMark {
           rootOverlay: rootOverlay,
           showSkipInLastTarget: showSkipInLastTarget,
           imageFilter: imageFilter,
-          preFindTarget: preFindTarget,
         );
       },
     );

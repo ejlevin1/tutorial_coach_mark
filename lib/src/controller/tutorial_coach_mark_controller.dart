@@ -91,18 +91,20 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     }
 
     int offset = (forward ? 1 : -1);
-    bool preSuccessful = false;
+    bool found = false;
     TargetFocus? newTarget;
 
-    while (!preSuccessful && getOffsetTarget(offset) != null) {
+    while (!found && getOffsetTarget(offset) != null) {
       newTarget = getOffsetTarget(offset);
-      preSuccessful = await _callPreActionTargetSafely(newTarget);
-      if (!preSuccessful) {
-        if (newTarget != null) {
+      if (newTarget != null) {
+        final initialized = await _callInitActionTargetSafely(newTarget);
+        if (!initialized) {
           _eventsController
               ?.add(TutorialCoachTargetFailedEvent(target: newTarget));
+          offset += (forward ? 1 : -1);
+        } else {
+          found = true;
         }
-        offset += (forward ? 1 : -1);
       }
     }
 
@@ -130,6 +132,8 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     if (newTarget == null) {
       _eventsController?.add(TutorialCoachMarkEvent(
           eventType: TutorialCoachMarkEventType.finished));
+    } else {
+      await _callPreActionTargetSafely(newTarget);
     }
 
     await _animateShowTarget();
@@ -265,56 +269,89 @@ class DefaultTutorialCoachMarkController extends ChangeNotifier
     await _animationController?.reverse();
   }
 
-  Future<void> _callPostActionTargetSafely(TargetFocus? target) async {
-    if (isDisposed) return;
-
-    if (target != null && target is PostActionTarget) {
-      var pat = (target as PostActionTarget);
-      _eventsController?.add(TutorialCoachTargetBeforePreEvent(target: target));
-      if (pat.post != null) {
-        try {
-          await pat.post!();
-          _eventsController
-              ?.add(TutorialCoachTargetAfterPreEvent(target: target));
-        } catch (e, s) {
-          debugPrint(e.toString());
-          debugPrintStack(stackTrace: s);
-          _eventsController?.add(TutorialCoachTargetAfterPostFailedEvent(
-              target: target, message: e.toString()));
-        }
-      }
-    }
-  }
-
-  Future<bool> _callPreActionTargetSafely(TargetFocus? target) async {
+  Future<bool> _callInitActionTargetSafely(TargetFocus? target) async {
     if (isDisposed) {
       debugPrintStack(
           label:
               'Called _callPreActionTargetSafely() when controller is disposed');
+      return false;
     }
 
-    if (isDisposed) return false;
-
-    if (target != null && target is PreActionTarget) {
-      var pat = (target as PreActionTarget);
-      if (pat.pre != null) {
-        _eventsController
-            ?.add(TutorialCoachTargetBeforePreEvent(target: target));
-        try {
-          await pat.pre!();
-          _eventsController
-              ?.add(TutorialCoachTargetAfterPreEvent(target: target));
-        } catch (e, s) {
-          debugPrint(e.toString());
-          debugPrintStack(stackTrace: s);
-          _eventsController?.add(TutorialCoachTargetAfterPreFailedEvent(
-              target: target, message: e.toString()));
-          return false;
-        }
+    if (target != null && target is InitActionTarget) {
+      var pat = (target as InitActionTarget);
+      _eventsController
+          ?.add(TutorialCoachTargetBeforeInitEvent(target: target));
+      try {
+        var available = await pat.init();
+        _eventsController?.add(
+          TutorialCoachTargetAfterInitEvent(
+            target: target,
+            available: available,
+          ),
+        );
+      } catch (e, s) {
+        debugPrint(e.toString());
+        debugPrintStack(stackTrace: s);
+        _eventsController?.add(TutorialCoachTargetAfterInitFailedEvent(
+            target: target, message: e.toString()));
+        return false;
       }
     }
 
     return true;
+  }
+
+  Future<bool> _callPreActionTargetSafely(TargetFocus? target) async {
+    if (target == null) return false;
+
+    if (isDisposed) {
+      debugPrintStack(
+          label:
+              'Called _callPreActionTargetSafely() when controller is disposed');
+      return false;
+    }
+
+    if (target is PreActionTarget) {
+      var pat = (target as PreActionTarget);
+      _eventsController?.add(TutorialCoachTargetBeforePreEvent(target: target));
+      try {
+        await pat.pre();
+        _eventsController
+            ?.add(TutorialCoachTargetAfterPreEvent(target: target));
+      } catch (e, s) {
+        debugPrint(e.toString());
+        debugPrintStack(stackTrace: s);
+        _eventsController?.add(TutorialCoachTargetAfterPreFailedEvent(
+            target: target, message: e.toString()));
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  Future<void> _callPostActionTargetSafely(TargetFocus? target) async {
+    if (isDisposed) {
+      debugPrintStack(
+          label:
+              'Called _callPostActionTargetSafely() when controller is disposed');
+      return;
+    }
+
+    if (target != null && target is PostActionTarget) {
+      var pat = (target as PostActionTarget);
+      _eventsController?.add(TutorialCoachTargetBeforePreEvent(target: target));
+      try {
+        await pat.post();
+        _eventsController
+            ?.add(TutorialCoachTargetAfterPreEvent(target: target));
+      } catch (e, s) {
+        debugPrint(e.toString());
+        debugPrintStack(stackTrace: s);
+        _eventsController?.add(TutorialCoachTargetAfterPostFailedEvent(
+            target: target, message: e.toString()));
+      }
+    }
   }
 
   @override

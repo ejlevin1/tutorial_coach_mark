@@ -1,13 +1,9 @@
 import 'package:flutter/widgets.dart';
-import 'package:tutorial_coach_mark/src/target/target_content.dart';
-import 'package:tutorial_coach_mark/src/target/target_position.dart';
-import 'package:tutorial_coach_mark/src/util.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
-class TargetFocus {
+abstract class TargetFocus {
   TargetFocus({
     this.identify,
-    this.keyTarget,
-    this.targetPosition,
     this.contents,
     this.shape,
     this.radius,
@@ -20,11 +16,9 @@ class TargetFocus {
     this.focusAnimationDuration,
     this.unFocusAnimationDuration,
     this.pulseVariation,
-  }) : assert(keyTarget != null || targetPosition != null);
+  });
 
   final dynamic identify;
-  final GlobalKey? keyTarget;
-  final TargetPosition? targetPosition;
   final List<TargetContent>? contents;
   final ShapeLightFocus? shape;
   final double? radius;
@@ -38,8 +32,90 @@ class TargetFocus {
   final Duration? unFocusAnimationDuration;
   final Tween<double>? pulseVariation;
 
+  TargetPosition? findPosition({
+    bool rootOverlay = false,
+  });
+
   @override
   String toString() {
-    return 'TargetFocus{identify: $identify, keyTarget: $keyTarget, targetPosition: $targetPosition, contents: $contents, shape: $shape}';
+    return 'TargetFocus{identify: $identify, contents: $contents, shape: $shape}';
+  }
+}
+
+class ResolverBasedActionableTargetFocus extends ActionableTargetFocus {
+  ResolverBasedActionableTargetFocus({
+    super.identify,
+    super.contents,
+    super.shape,
+    super.radius,
+    super.borderSide,
+    super.color,
+    super.enableOverlayTab = false,
+    super.enableTargetTab = true,
+    super.alignSkip,
+    super.paddingFocus,
+    super.focusAnimationDuration,
+    super.unFocusAnimationDuration,
+    super.pulseVariation,
+    super.onInit,
+    super.onPre,
+    super.onPost,
+    required this.targetResolver,
+  });
+
+  TargetPositionResolver targetResolver;
+
+  @override
+  TargetPosition? findPosition({bool rootOverlay = false}) =>
+      targetResolver.resolve(
+        rootOverlay: rootOverlay,
+      );
+}
+
+abstract class ActionableTargetFocus extends TargetFocus
+    implements InitActionTarget, PreActionTarget, PostActionTarget {
+  ActionableTargetFocus({
+    super.identify,
+    super.contents,
+    super.shape,
+    super.radius,
+    super.borderSide,
+    super.color,
+    super.enableOverlayTab = false,
+    super.enableTargetTab = true,
+    super.alignSkip,
+    super.paddingFocus,
+    super.focusAnimationDuration,
+    super.unFocusAnimationDuration,
+    super.pulseVariation,
+    this.onInit,
+    this.onPre,
+    this.onPost,
+  });
+
+  Future<bool> Function()? onInit;
+  Future<void> Function()? onPre;
+  Future<void> Function()? onPost;
+
+  @override
+  Future<void> pre() async {
+    if (onPre != null) {
+      await onPre!.call();
+    }
+  }
+
+  @override
+  Future<void> post() async {
+    if (onPost != null) {
+      await onPost!.call();
+    }
+  }
+
+  @override
+  Future<bool> init() async {
+    if (onInit != null) {
+      return await onInit!.call();
+    }
+    return true;
   }
 }

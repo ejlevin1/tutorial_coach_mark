@@ -50,6 +50,47 @@ abstract class TutorialCoachTargetBaseControllerEventWithMessage
   final String message;
 }
 
+class TutorialCoachTargetBeforeInitEvent
+    extends TutorialCoachTargetBaseControllerEvent {
+  TutorialCoachTargetBeforeInitEvent({
+    required TargetFocus target,
+  }) : super(
+          target: target,
+        );
+
+  @override
+  String toString() => 'Before Init() event for ${target.identify}';
+}
+
+class TutorialCoachTargetAfterInitEvent
+    extends TutorialCoachTargetBaseControllerEvent {
+  TutorialCoachTargetAfterInitEvent({
+    required TargetFocus target,
+    required this.available,
+  }) : super(
+          target: target,
+        );
+
+  final bool available;
+
+  @override
+  String toString() => 'After Init() event for ${target.identify}';
+}
+
+class TutorialCoachTargetAfterInitFailedEvent
+    extends TutorialCoachTargetBaseControllerEventWithMessage {
+  TutorialCoachTargetAfterInitFailedEvent({
+    required TargetFocus target,
+    required String message,
+  }) : super(
+          target: target,
+          message: message,
+        );
+
+  @override
+  String toString() => 'Init() event failed for ${target.identify}: $message';
+}
+
 class TutorialCoachTargetBeforePreEvent
     extends TutorialCoachTargetBaseControllerEvent {
   TutorialCoachTargetBeforePreEvent({

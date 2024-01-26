@@ -1,7 +1,11 @@
+abstract class InitActionTarget {
+  Future<bool> init();
+}
+
 abstract class PreActionTarget {
-  Future<void> Function()? pre;
+  Future<void> pre();
 }
 
 abstract class PostActionTarget {
-  Future<void> Function()? post;
+  Future<void> post();
 }

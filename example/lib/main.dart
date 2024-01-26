@@ -257,9 +257,11 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   List<TargetFocus> _createTargets() {
     List<TargetFocus> targets = [];
     targets.add(
-      TargetFocus(
+      ResolverBasedActionableTargetFocus(
         identify: "keyBottomNavigation1",
-        keyTarget: keyBottomNavigation1,
+        targetResolver: GlobalKeyTargetResolver(
+          key: keyBottomNavigation1,
+        ),
         alignSkip: Alignment.topRight,
         enableOverlayTab: true,
         contents: [
@@ -285,9 +287,11 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     );
 
     targets.add(
-      TargetFocus(
+      ResolverBasedActionableTargetFocus(
         identify: "keyBottomNavigation2",
-        keyTarget: keyBottomNavigation2,
+        targetResolver: GlobalKeyTargetResolver(
+          key: keyBottomNavigation2,
+        ),
         alignSkip: Alignment.topRight,
         contents: [
           TargetContent(
@@ -312,9 +316,11 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     );
 
     targets.add(
-      TargetFocus(
+      ResolverBasedActionableTargetFocus(
         identify: "keyBottomNavigation3",
-        keyTarget: keyBottomNavigation3,
+        targetResolver: GlobalKeyTargetResolver(
+          key: keyBottomNavigation3,
+        ),
         alignSkip: Alignment.topRight,
         contents: [
           TargetContent(
@@ -338,9 +344,11 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       ),
     );
     targets.add(
-      TargetFocus(
+      ResolverBasedActionableTargetFocus(
         identify: "Target 0",
-        keyTarget: keyButton1,
+        targetResolver: GlobalKeyTargetResolver(
+          key: keyButton1,
+        ),
         contents: [
           TargetContent(
             align: ContentAlign.bottom,
@@ -371,9 +379,11 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       ),
     );
     targets.add(
-      TargetFocus(
+      ResolverBasedActionableTargetFocus(
         identify: "Target 1",
-        keyTarget: keyButton,
+        targetResolver: GlobalKeyTargetResolver(
+          key: keyButton,
+        ),
         color: Colors.purple,
         contents: [
           TargetContent(
@@ -414,9 +424,11 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       ),
     );
     targets.add(
-      TargetFocus(
+      ResolverBasedActionableTargetFocus(
         identify: "Target 2",
-        keyTarget: keyButton4,
+        targetResolver: GlobalKeyTargetResolver(
+          key: keyButton,
+        ),
         contents: [
           TargetContent(
             align: ContentAlign.left,
@@ -467,9 +479,11 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         shape: ShapeLightFocus.RRect,
       ),
     );
-    targets.add(TargetFocus(
+    targets.add(ResolverBasedActionableTargetFocus(
       identify: "Target 3",
-      keyTarget: keyButton5,
+      targetResolver: GlobalKeyTargetResolver(
+        key: keyButton5,
+      ),
       contents: [
         TargetContent(
             align: ContentAlign.right,
@@ -496,9 +510,11 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       ],
       shape: ShapeLightFocus.RRect,
     ));
-    targets.add(TargetFocus(
+    targets.add(ResolverBasedActionableTargetFocus(
       identify: "Target 4",
-      keyTarget: keyButton3,
+      targetResolver: GlobalKeyTargetResolver(
+        key: keyButton3,
+      ),
       contents: [
         TargetContent(
           align: ContentAlign.top,
@@ -537,9 +553,11 @@ class MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
       shape: ShapeLightFocus.Circle,
     ));
     targets.add(
-      TargetFocus(
+      ResolverBasedActionableTargetFocus(
         identify: "Target 5",
-        keyTarget: keyButton2,
+        targetResolver: GlobalKeyTargetResolver(
+          key: keyButton2,
+        ),
         shape: ShapeLightFocus.Circle,
         contents: [
           TargetContent(
