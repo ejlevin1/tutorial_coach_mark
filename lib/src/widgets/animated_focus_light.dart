@@ -127,6 +127,10 @@ abstract class AnimatedFocusLightState extends State<AnimatedFocusLight>
       if (overlayTap) {
         await widget.clickOverlay?.call(_targetFocus!);
       }
+    } else {
+      debugPrint('Clicked overlay when target focus not set!');
+      debugPrintStack(stackTrace: StackTrace.current);
+      widget.controller.cancel();
     }
   }
 
@@ -238,7 +242,7 @@ class AnimatedStaticFocusLightState extends AnimatedFocusLightState {
     }
 
     return InkWell(
-      onTap: _targetFocus?.enableOverlayTab ?? false
+      onTap: _targetFocus?.enableOverlayTab ?? true
           ? () => _tapHandler(overlayTap: true)
           : null,
       child: AnimatedBuilder(
@@ -344,7 +348,7 @@ class AnimatedPulseFocusLightState extends AnimatedFocusLightState {
     }
 
     return InkWell(
-      onTap: _targetFocus?.enableOverlayTab ?? false
+      onTap: _targetFocus?.enableOverlayTab ?? true
           ? () => _tapHandler(overlayTap: true)
           : null,
       child: AnimatedBuilder(
