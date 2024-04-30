@@ -25,6 +25,9 @@ class TutorialCoachMarkEvent {
   TutorialCoachMarkEvent({required this.eventType});
 
   TutorialCoachMarkEventType eventType;
+
+  @override
+  String toString() => 'TutorialCoachMarkEventType($eventType)';
 }
 
 abstract class TutorialCoachTargetBaseControllerEvent
